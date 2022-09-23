@@ -30,7 +30,8 @@ Now run
     chmod +x
     sh ./sync.sh
 
-**Note** You will be prompted to copy/paste a link to authenticate to AWS SSO. 
+**Note** 
+You will be prompted to copy/paste a link to authenticate to AWS SSO. 
 Once this is complete, return to the terminal window and press [enter] to retrieve the token and run the rest of the tool. 
 
 Grab some coffee and you should see your AWS Accounts synced to ~/.aws/config & steampipe connections for the AWS plugin ~/.steampipe/config/aws.spc automatically.
