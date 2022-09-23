@@ -3,6 +3,7 @@
 **Note**: [aws-sso-steampipe-tool](https://github.com/somoore/aws-sso-steampipe-tool) is based on the awesome [aws-sso-profile-tool](https://github.com/aws-samples/aws-sso-profile-tool). 
 
 **What does this do?**
+
 This tool generate profiles in your ~/.aws/config path based on your level of access in AWS SSO in a headless manner and also auto-generates the connections required for [Steampipe](https://steampipe.io/) to connect to one or many accounts using the [AWS](https://hub.steampipe.io/plugins/turbot/aws) plugin.
 
 **What if I have multiple AWS accounts in AWS SSO?**
