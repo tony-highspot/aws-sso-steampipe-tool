@@ -1,6 +1,6 @@
 ﻿# Getting Started with aws-sso-steampipe-tool
 
-**Note**: [aws-sso-steampipe-tool](https://github.com/somoore/aws-sso-steampipe-tool) is based on [aws-sso-profile-tool](https://github.com/aws-samples/aws-sso-profile-tool). 
+**Note**: [aws-sso-steampipe-tool](https://github.com/somoore/aws-sso-steampipe-tool) is based on [aws-sso-profile-tool](https://github.com/aws-samples/aws-sso-profile-tool) from AWS. 
 
 **What does this do?**
 
