@@ -11,6 +11,7 @@ This tool generate profiles in your ~/.aws/config path based on your level of ac
 This tool has been tested against AWS Orgs as large as 900 accounts with great success. The larger your AWS Org & SSO size the longer it will take for the tool to generate the necessary profiles and connections. YMMV
 
 **How do I run this?**
+
 First make sure you have the following installed:
  - [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
  - [Steampipe](https://steampipe.io/downloads)
