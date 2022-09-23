@@ -16,7 +16,7 @@ First make sure you have the following installed:
 
 git clone https://github.com/somoore/aws-sso-steampipe-tool.git  & open 'sync.sh' in your favorite editor and edit the following:
 
-#Add your AWS SSO Start URL on the next line
+#Add your AWS SSO Start URL & Region on the next two lines
  
 
     START_URL="https://[start-url].awsapps.com/start#/"; 
