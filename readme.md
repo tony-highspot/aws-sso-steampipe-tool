@@ -7,6 +7,7 @@
 This tool generate profiles in your ~/.aws/config path based on your level of access in AWS SSO in a headless manner and also auto-generates the connections required for [Steampipe](https://steampipe.io/) to connect to one or many accounts using the [AWS](https://hub.steampipe.io/plugins/turbot/aws) plugin.
 
 **What if I have multiple AWS accounts in AWS SSO?**
+
 This tool has been tested against AWS Orgs as large as 900 accounts with great success. The larger your AWS Org & SSO size the longer it will take for the tool to generate the necessary profiles and connections. YMMV
 
 **How do I run this?**
