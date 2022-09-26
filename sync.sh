@@ -1,5 +1,5 @@
 #!/bin/bash
-#Version=3.0
+#Version=3.3
 
 ### User Defined Variables ###
 START_URL="https://[start-url].awsapps.com/start#/";
@@ -227,15 +227,15 @@ output = $defoutput
 EOF
 )
 
-	PROFILE_ID_COUNT=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -ce "sso_role_name = $rolename" --no-group-separator -A2 -B4) >> /dev/null 2>&1
+	PROFILE_ID_COUNT=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -ce "sso_role_name = $rolename" -A2 -B4) >> /dev/null 2>&1
 
 	if [[ ${PROFILE_ID_COUNT} -eq 1 ]]; then
-		OLD_PROFILE_VIEW=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4)
-		if [[ "${OLD_PROFILE_VIEW}" == "${VIEW}" ]]; then
+		OLD_PROFILE_VIEW=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4)
+		if [ "${OLD_PROFILE_VIEW}" == "${VIEW}" ]; then
 			echo "	Profile for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename} name already exists!"
 			continue
 		else
-			OLD_PROFILE=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+			OLD_PROFILE=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
 			sed -i "/profile ${OLD_PROFILE}/,+6d" ${profilefile}
 			echo -n "  Profile Detected, Updating $profilename... "
 			add_profile ## Function call to add profile
@@ -245,7 +245,7 @@ EOF
 		fi
 	elif [[ ${PROFILE_ID_COUNT} -gt 1 ]]; then
 		echo "	 Multiple Profile Detected for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename}";
-		OLD_PROFILE_NAME=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4 | grep "profile" | awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+		OLD_PROFILE_NAME=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4 | grep "profile" | awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
 		for PROFILE in ${OLD_PROFILE_NAME}; do
 			sed -i "/profile ${PROFILE}/,+6d" ${profilefile}
 		done
@@ -268,7 +268,7 @@ EOF
     echo
     echo " Done, Processing profile for AWS account $acctnum ($acctname)"
 
-    sleep 1
+#    sleep 1
 done < "$acctsfile"
 rm "$acctsfile"
 
@@ -320,10 +320,10 @@ declare -a ignored_profiles
 
 IGNORE_PROFILES=$(cat ${IGNORE_FILE} | grep "^\[profile" | awk '{print $2}' | sed 's/\]//g')
 for IP in ${IGNORE_PROFILES}; do
-	IP_PROFILE=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" --no-group-separator -A6)
-	IP_SSO_AC_ID=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" --no-group-separator -A6 | grep "sso_account_id")
-	IP_SSO_RN=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" --no-group-separator -A6 | grep "sso_role_name")
-	OLD_PROFILE=$(cat "$profilefile" | grep -e "${IP_SSO_AC_ID}" --no-group-separator -A3 -B3 | grep -e "${IP_SSO_RN}" --no-group-separator -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+	IP_PROFILE=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6)
+	IP_SSO_AC_ID=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6 | grep "sso_account_id")
+	IP_SSO_RN=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6 | grep "sso_role_name")
+	OLD_PROFILE=$(cat "$profilefile" | grep -e "${IP_SSO_AC_ID}" -A3 -B3 | grep -e "${IP_SSO_RN}" -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
 	ignored_profiles+=("$OLD_PROFILE")
 done
 
