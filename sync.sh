@@ -267,12 +267,12 @@ EOF
 			continue
 		fi
 	elif [[ ${PROFILE_ID_COUNT} -gt 1 ]]; then
-		echo "	 Multiple Profile Detected for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename}";
+		echo "	 Multiple Profiles Detected for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename}";
 		OLD_PROFILE_NAME=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4 | grep "profile" | awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
 		for PROFILE in ${OLD_PROFILE_NAME}; do
 			sed -i "/profile ${PROFILE}/,+6d" ${profilefile}
 		done
-#		echo -n "  Multiple Profile Detected, Reconfiguring $profilename... "
+#		echo -n "  Multiple Profiles Detected, Reconfiguring $profilename... "
 		add_profile  ## Function call to add profile
 
 		echo "Succeeded"
@@ -312,7 +312,7 @@ cat $profilefile | awk '!NF {if (++n <= 1) print; next}; {n=0;print}' > ${profil
 mv ${profilefile}_$(date +"%Y%m%d") $profilefile
 
 if [[ "${#created_profiles[@]}" -eq 0 ]]; then
-	echo "No Changes Found, There are no New Profile in AWS!!";
+	echo "No Changes Found, There are no New Profiles in AWS!!";
 	echo "";
 ### Delete Unnecessery Last Lines
 
