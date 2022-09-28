@@ -1,61 +1,91 @@
 #!/bin/bash
-# Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-# modified by somoore
+#Version=4.0
 
-#This your path to aws/config, edit as needed
-PROFILEFILE="$HOME/.aws/config"
-
-#This your path to steampipe connections for aws, edit as needed
-CONNECTIONFILE="$HOME/.steampipe/config/aws.spc"
-#PROFILEFILE="~/.aws/config"
-#CONNECTIONFILE="~/.aws/aws.spc"
-
-#cp -p ${PROFILEFILE} ${PROFILEFILE}_$(date +"%Y%m%d_%H%M")
-
-#if [ $# -lt 2 ];
-#then
-#    echo "";
-#    echo "Syntax: $0 <region> <start_url> [<profile_file>]"
-#    echo "";
-#    exit 1 
-#fi
-
-#if [ $# -eq 3 ];
-#then
-#    profilefile=$3
-#else
-#    profilefile=$PROFILEFILE
-#fi
-
-profilefile=${PROFILEFILE};
-#Add your AWS SSO Start URL on the next line
+### User Defined Variables ###
 START_URL="https://[start-url].awsapps.com/start#/";
+#START_URL="https://[start-url].awsapps.com/start#/";
 REGION="us-east-1";
 
-touch ${PROFILEFILE}
+### AWS Profile Location Related Variables ###
+AWS_PROFILE_DIR=${HOME}/.aws
+PROFILEFILE="${AWS_PROFILE_DIR}/config"
+CONNECTIONFILE_DIR="$HOME/.steampipe/config"
+CONNECTIONFILE="${CONNECTIONFILE_DIR}/aws.spc"
+IGNORE_FILE="${HOME}/.aws/.ignore" 
+profilefile=${PROFILEFILE};
+### End of Variable Decleration ###
 
-if [[ $(aws --version) == aws-cli/1* ]]
-then
+## Check AWS CLI Version 
+if [[ $(aws --version) == aws-cli/1* ]]; then
     echo "";
     echo "ERROR: $0 requires AWS CLI v2 or higher";
     echo "";
     exit 1
 fi
+
+## Check if AWS Profile Directory is not Exists, creating one
+if [ ! -d ${AWS_PROFILE_DIR} ]; then
+        echo "${AWS_PROFILE_DIR} is missing, creating...";
+        mkdir ${AWS_PROFILE_DIR}
+fi
+
+## Check if AWS Profile is not Exists and no default profile
+if [ ! -f ${PROFILEFILE} ]; then
+        echo "Profile File missing, creating";
+        touch ${PROFILEFILE};
+        echo -e '\n''\n'"${REGION}"'\n' | aws configure
+fi
+
+## Create Default Profile for empty profile.
+if [ ! -s ${PROFILEFILE} ]; then
+        echo "Profile is empty, Creating Default Profile";
+        echo -e '\n''\n''us-east-1''\n' | aws configure
+fi
+echo "";
+
+## Take Backup of old profile file of there is any populated profile
+cat ${PROFILEFILE} | grep "^sso_account_id =" >> /dev/null 2>&1
+if [ $? -eq 0 ]; then
+        echo "Profile exists, creating backup";
+        cp -p ${PROFILEFILE} ${PROFILEFILE}.bk
+fi
+####
+
+## Create Connection dir and File if not exists
+mkdir -p ${CONNECTIONFILE_DIR}
+
+if [ ! -f ${CONNECTIONFILE} ]; then
+        echo "Profile File missing, creating";
+        touch ${CONNECTIONFILE};
+fi
+
+function update_profile() {
+j="${i}"
+while true; do
+	cat ${profilefile} | grep "^\[profile ${Profile_Name}\]$" | awk '{print $2}' | sed 's/\]//g' >> /dev/null 2>&1
+	if [ $? -eq 0 ]; then
+		((j++))
+		Profile_Name="${ac_name}_AWS_Account_$j"
+		VIEW=$(echo "${VIEW}" | sed "s/${profilename}/${Profile_Name}/g")
+		profilename="${Profile_Name}"
+		break
+#		continue
+	else
+		break   
+	fi
+done
+}
+
+function add_profile() {
+if [ -s ${PROFILEFILE} ]; then
+	echo "" >> "$profilefile";
+	echo "$VIEW" >> "$profilefile";
+	echo "" >> "$profilefile";
+else 
+	echo "$VIEW" >> "$profilefile";
+	echo "" >> "$profilefile";
+fi
+}
 
 # Get secret and client ID to begin authentication session
 
@@ -151,13 +181,14 @@ fi
 
 declare -a created_profiles
 
-#echo "### The section below added by awsssoprofiletool.sh TimeStamp: $(date +"%Y%m%d.%H%M")" >> "$profilefile"
+echo "" >> "$profilefile"
+echo "### The section below added by awsssoprofiletool.sh TimeStamp: $(date +"%Y%m%d.%H%M")" >> "$profilefile"
 
 # Read in accounts
 
 while IFS=$'\t' read skip acctnum acctname acctowner;
 do
-    echo
+    echo "";
     echo "Working on roles for account $acctnum ($acctname)..."
     rolesfile="$(mktemp ./sso.roles.XXXXXX)"
 
@@ -165,7 +196,7 @@ do
     trap '{ rm -f "$rolesfile" "$acctsfile"; echo; exit 255; }' SIGINT SIGTERM
     
     aws sso list-account-roles --account-id "$acctnum" --access-token "$token" --region "${REGION}" --output text | sort -k 3 > "$rolesfile"
-    sleep 1
+#    sleep 1
     if [ $? -ne 0 ];
     then
 	echo "Failed to retrieve roles."
@@ -179,15 +210,15 @@ do
     do
 	
 	if [[ $rolecount -gt 1 ]]; then
-		p="${acctname}_"$rolename"_Account_$i"
+		ac_name=$(echo ${acctname} | sed 's/-/_/g' | sed 's/[[:space:]]/_/g')
+		Profile_Name="${ac_name}_AWS_Account_$i"
 		((i++))
 	else
-		p="$acctname"
-		
+		ac_name=$(echo ${acctname} | sed 's/-/_/g' | sed 's/[[:space:]]/_/g')
+		Profile_Name="${ac_name}"
 	fi
-	Profile_Name=$(echo $p | sed 's/-/_/g' | sed 's/[[:space:]]/_/g')
 	profilename=$Profile_Name
-	    
+
 VIEW=$(cat <<EOF
 [profile $profilename]
 sso_start_url = ${START_URL}
@@ -199,49 +230,43 @@ output = $defoutput
 EOF
 )
 
-
-	PROFILE_ID_COUNT=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -ce "sso_role_name = $rolename" --no-group-separator -A2 -B4) >> /dev/null 2>&1
+	PROFILE_ID_COUNT=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -ce "sso_role_name = $rolename" -A2 -B4) >> /dev/null 2>&1
 
 	if [[ ${PROFILE_ID_COUNT} -eq 1 ]]; then
-		OLD_PROFILE_VIEW=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4)
-		if [[ "${OLD_PROFILE_VIEW}" == "${VIEW}" ]]; then
-			echo "	Profile for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename} name already exists!"
+		OLD_PROFILE_VIEW=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4)
+		if [ "${OLD_PROFILE_VIEW}" == "${VIEW}" ]; then
+#			echo "	Profile for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename} name already exists!"
 			continue
 		else
-			OLD_PROFILE=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
-	echo ${OLD_PROFILE} id ;
-			sed -i "/profile ${OLD_PROFILE}/,+6d" ${profilefile}
-			echo -n "  Profile Detected, Updating $profilename... "
-			echo "$VIEW" >> "$profilefile";
-			echo "" >> "$profilefile";
-
-			echo "$CONNECTION_VIEW" >> "$CONNECTIONFILE";
-			echo "" >> "$CONNECTIONFILE";
-
+			OLD_PROFILE=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+			echo -n "  Profile Detected, Updating ${ac_name}... "
+#			echo -n "  Profile Detected, Updating $profilename... "
+			
+			update_profile ## Function call to update profile
+			sed -i "s/profile ${OLD_PROFILE}/profile ${profilename}/g" ${profilefile}
 			echo "Succeeded"
 			continue
 		fi
 	elif [[ ${PROFILE_ID_COUNT} -gt 1 ]]; then
 		echo "	 Multiple Profile Detected for Account_Name: ${acctname}, SSO_Account_ID:${acctnum}, SSO_Role_Name: ${rolename}";
-		OLD_PROFILE_NAME=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" --no-group-separator -A3 -B3 | grep -e "sso_role_name = $rolename" --no-group-separator -A2 -B4 | grep "profile" | awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+		OLD_PROFILE_NAME=$(cat "$profilefile" | grep -e "sso_account_id = ${acctnum}" -A3 -B3 | grep -e "sso_role_name = $rolename" -A2 -B4 | grep "profile" | awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
 		for PROFILE in ${OLD_PROFILE_NAME}; do
 			sed -i "/profile ${PROFILE}/,+6d" ${profilefile}
 		done
-		echo -n "  Multiple Profile Detected, Reconfiguring $profilename... "
-		echo "$VIEW" >> "$profilefile";
-		echo "" >> "$profilefile";
-
-		echo "$CONNECTION_VIEW" >> "$CONNECTIONFILE";
-		echo "" >> "$CONNECTIONFILE";
+#		echo -n "  Multiple Profile Detected, Reconfiguring $profilename... "
+		add_profile  ## Function call to add profile
 
 		echo "Succeeded"
 		continue
 	fi
 
-	echo -n "  Creating New Profile $profilename... "
-	echo "$VIEW" >> "$profilefile";
-	echo "" >> "$profilefile";
+	if [[ $(cat "$profilefile" | grep -ce "^\[profile ${profilename}\]$") -ne 0 ]]; then
+		update_profile
+		echo "Succeeded";
+	fi
 
+	echo -n "  Creating New Profile $profilename... "
+	add_profile ## Function call to add profile
 
 	echo "Succeeded"
 	created_profiles+=("$profilename")
@@ -249,23 +274,43 @@ EOF
     done < "$rolesfile"
     rm "$rolesfile"
 
-    echo
-    echo " Done, Processing profile for AWS account $acctnum ($acctname)"
+#    echo
+#    echo " Done, Processing profile for AWS account $acctnum ($acctname)"
 
-    sleep 1
+#    sleep 1
 done < "$acctsfile"
 rm "$acctsfile"
 
+echo "" >> "$profilefile"
 #echo "### The section above added by awsssoprofiletool.sh TimeStamp: $(date +"%Y%m%d.%H%M")" >> "$profilefile"
 
 echo
 echo "Processing complete."
 echo
 
+echo
+cat $profilefile | awk '!NF {if (++n <= 1) print; next}; {n=0;print}' > ${profilefile}_$(date +"%Y%m%d")
+mv ${profilefile}_$(date +"%Y%m%d") $profilefile
+
 if [[ "${#created_profiles[@]}" -eq 0 ]]; then
-	echo "No New Profile Added!!";
+	echo "No Changes Found, There are no New Profile in AWS!!";
+	echo "";
+### Delete Unnecessery Last Lines
+
+	if [[ -z $(sed -n '$p' ${profilefile}) ]]; then >> /dev/null 2>&1
+		sed -i '$d' $profilefile
+	fi
+
 	tail -n1 $profilefile | grep "The section above added by awsssoprofiletool.sh TimeStamp:" >> /dev/null 2>&1
 	if [ $? -eq 0 ]; then
+		sed -i '$d' $profilefile
+	fi
+
+	if [[ -z $(sed -n '$p' ${profilefile}) ]]; then >> /dev/null 2>&1
+		sed -i '$d' $profilefile
+	fi
+
+	if [[ -z $(sed -n '$p' ${profilefile}) ]]; then >> /dev/null 2>&1
 		sed -i '$d' $profilefile
 	fi
 
@@ -274,7 +319,7 @@ if [[ "${#created_profiles[@]}" -eq 0 ]]; then
 		sed -i '$d' $profilefile
 	fi
 else
-	echo "Added the following profiles to $profilefile:"
+	echo " Added the following profiles to $profilefile:"
 	echo
 
 	for i in "${created_profiles[@]}"
@@ -282,13 +327,40 @@ else
 		echo "$i"
 	done
 fi
+## Process .ignore profile
+if [ -f ${IGNORE_FILE} ]; then
 
-echo
-cat $profilefile | awk '!NF {if (++n <= 1) print; next}; {n=0;print}' > ${profilefile}_$(date +"%Y%m%d")
-mv ${profilefile}_$(date +"%Y%m%d") $profilefile
-#############
+echo "";
+echo "Processing Ignore Profiles...";
+
+declare -a ignored_profiles
+
+IGNORE_PROFILES=$(cat ${IGNORE_FILE} | grep "^\[profile" | awk '{print $2}' | sed 's/\]//g') >> /dev/null 2>&1
+for IP in ${IGNORE_PROFILES}; do
+	IP_PROFILE=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6)
+	IP_SSO_AC_ID=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6 | grep "sso_account_id")
+	IP_SSO_RN=$(cat ${IGNORE_FILE} | grep "^\[profile ${IP}" -A6 | grep "sso_role_name")
+	OLD_PROFILE=$(cat "$profilefile" | grep -e "${IP_SSO_AC_ID}" -A3 -B3 | grep -e "${IP_SSO_RN}" -A2 -B4 | grep "profile"| awk '{$1="";print}' | sed 's/\]//g'| sed 's/^[[:space:]]//g')
+	ignored_profiles+=("$OLD_PROFILE")
+done
+fi
+
+if [[ "${#ignored_profiles[@]}" -ne 0 ]]; then
+	echo "  Ignored Profiles are..";
+	for ips in "${ignored_profiles[@]}"
+	do
+		echo "	${ips}"
+	done
+fi
+
+echo "";
+
 ## AWS Config Profiles for Steampipe
-AWS_PROFILES=$(cat ${profilefile} | grep "^\[profile" | awk '{print $2}' | sed 's/\]//g')
+AWS_PROFILES=$(cat ${profilefile} | grep "^\[profile" | awk '{print $2}' | sed 's/\]//g' | sort)
+for ips in "${ignored_profiles[@]}"
+do
+	AWS_PROFILES=$(echo "${AWS_PROFILES}" | grep -v "^${ips}$");
+done
 
 rm -f ${CONNECTIONFILE}
 for SC in ${AWS_PROFILES}; do
@@ -316,5 +388,9 @@ EOF
 )
 echo "$AGGREGATOR_VIEW" >> "$CONNECTIONFILE"
 ###########
+echo "";
+echo "AWS SSO Profile Sync Task Completed.";
+echo "";
 
 exit 0
+##### End of Script Execution #####
